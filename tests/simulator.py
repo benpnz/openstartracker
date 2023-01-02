@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # Copyright (c) 2016 Joerg H. Mueller <nexyon@gmail.com>
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
@@ -10,10 +10,10 @@
 # distribute, distribute with modifications, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included
 # in all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -21,7 +21,7 @@
 # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
 # THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-# 
+#
 # Except as contained in this notice, the name(s) of the above copyright
 # holders shall not be used in advertising or otherwise to promote the
 # sale, use or other dealings in this Software without prior written
@@ -35,9 +35,10 @@ import pandas as pd
 import numpy as np
 import math
 import sys
+from PIL import Image
 
 BASE_PHOTONS = 19100 # photoelectrons per mm^2 and second of a magnitude 0 G2 star
-            
+
 
 # Geometric Transformations
 # -------------------------
@@ -276,7 +277,8 @@ class CubicCamera(Camera):
 # ------------
 
 class StarCatalog:
-    def __init__(self, filename='hip_main.dat'):
+    #def __init__(self, filename='hip_main.dat'):
+    def __init__(self, filename='updated_test_hip.dat'):
         if filename is not None:
             self.read(filename)
             self.preprocess()
@@ -285,6 +287,9 @@ class StarCatalog:
         filter_index = np.logical_not(np.logical_or(np.isnan(self.catalog['RAdeg']), np.isnan(self.catalog['Vmag'])))
 
         self.catalog = self.catalog[filter_index]
+
+        # go through the catalog and remove the stars that are too dim
+        self.catalog = self.catalog.drop(self.catalog[self.catalog.Vmag > 6].index)
 
         self.star_vectors = angles_to_vector(np.deg2rad(self.catalog['RAdeg']), np.deg2rad(self.catalog['DEdeg']))
 
@@ -308,7 +313,7 @@ class StarCatalog:
         result[indices >= 0] = self.catalog['HIP'].iloc[indices[indices >= 0]]
         return result
 
-    def read(self, filename='hip_main.dat'):
+    def read(self, filename='updated_test_hip.dat'):
         """Loads the Hipparchos star catalog."""
 
         columns = [
@@ -403,7 +408,7 @@ class StarDetector:
         self.t_exp = t_exp
         self.aperture = aperture
         self.base_flux = base_flux
-        
+
     @staticmethod
     def norm_gaussian(sigma):
         return math.erf((2*sigma)**-0.5)**2/4.
@@ -413,7 +418,7 @@ class StarDetector:
 
         if add_noise:
             flux = flux + np.random.normal(0, IMAGE_VARIANCE, len(flux))
-            
+
             flux_per_photon = self.base_flux* self.t_exp * self.aperture ** 2 * np.pi/BASE_PHOTONS
             flux += flux_per_photon*np.random.normal(0, self.norm_gaussian(self.sigma_psf)*np.sqrt(np.clip(flux/flux_per_photon,photon_floor,None)), len(flux))
         return np.clip(flux,photon_floor*flux_per_photon,None)
@@ -526,7 +531,7 @@ class Scene:
         """Scrambles the order of stars in a scene."""
 
         scramble_index = np.random.permutation(range(len(self.ids)))    #permutation returns ndarray
-        
+
         if len(scramble_index) == 0:
             return None
 
@@ -630,13 +635,20 @@ if __name__ == '__main__':
 
 	camera = cameras[cam](f, (res_x, res_y), pixel_ar, (ppx, ppy))
 	detector = StarDetector(sigma_psf, t_exp, aperture, base_flux)
-	num_scenes = 100
+	num_scenes = 10
 	inputs = []
 	outputs = []
 
 	for i in range(num_scenes):
-		scene = Scene.random(catalog, camera, detector, min_true, max_true, min_false, max_false, gaussian_noise_sigma=gaussian_noise_sigma, magnitude_gaussian=magnitude_gaussian)
+		#scene = Scene.random(catalog, camera, detector, min_true, max_true, min_false, max_false, gaussian_noise_sigma=gaussian_noise_sigma, magnitude_gaussian=magnitude_gaussian)
+		scene = Scene.random(catalog, camera, detector, min_true, max_true, min_false, max_false)
+		#print("{}".format(str(scene)))
 		inputs.append(np.hstack((scene.pos[::, ::-1], scene.magnitudes.reshape(-1, 1))).flatten())
+		# create the image
+		img = Image.new('RGB', (int(res_x), int(res_y)))
+		for j in scene.pos:
+			img.putpixel((int(j[0]), int(j[1])), (255,255,255))
+		img.save('stars_' + str(i) + '.png')
 		outputs.append(scene.ids)
 
 	def write_csv(filename, lines):
