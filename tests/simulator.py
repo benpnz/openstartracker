@@ -640,14 +640,15 @@ if __name__ == '__main__':
 	outputs = []
 
 	for i in range(num_scenes):
-		#scene = Scene.random(catalog, camera, detector, min_true, max_true, min_false, max_false, gaussian_noise_sigma=gaussian_noise_sigma, magnitude_gaussian=magnitude_gaussian)
-		scene = Scene.random(catalog, camera, detector, min_true, max_true, min_false, max_false)
+		scene = Scene.random(catalog, camera, detector, min_true, max_true, min_false, max_false, gaussian_noise_sigma=gaussian_noise_sigma, magnitude_gaussian=magnitude_gaussian)
+		#scene = Scene.random(catalog, camera, detector, min_true, max_true, min_false, max_false)
 		#print("{}".format(str(scene)))
 		inputs.append(np.hstack((scene.pos[::, ::-1], scene.magnitudes.reshape(-1, 1))).flatten())
 		# create the image
 		img = Image.new('RGB', (int(res_x), int(res_y)))
 		for j in scene.pos:
-			img.putpixel((int(j[0]), int(j[1])), (255,255,255))
+			if (int(j[0]) >= 0 and int(j[0]) < res_x) and (int(j[1]) >= 0 and int(j[1]) < res_y):
+				img.putpixel((int(j[0]), int(j[1])), (255,255,255))
 		img.save('stars_' + str(i) + '.png')
 		outputs.append(scene.ids)
 

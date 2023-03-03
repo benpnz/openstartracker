@@ -20,12 +20,12 @@ except KeyError: DOUBLE_STAR_PX = 3.5 #pixels of seperation needed to distinguis
 try: POS_ERR_SIGMA = float(environ['POS_ERR_SIGMA'])
 except KeyError: POS_ERR_SIGMA = 2 #Check all constellations which fall inside these bounds
 ### Note: Increasing this can actualy reduce the probability of finding a match
-### as the true match has to stand out against a larger crowd 
+### as the true match has to stand out against a larger crowd
 
 
 ### NOTE: all of the following options multiply runtime by (N+2)^2
 try: MAX_FALSE_STARS = int(environ['MAX_FALSE_STARS'])
-except KeyError: MAX_FALSE_STARS = 2 #maximum number of objects that can be brighter than the two brightest stars 
+except KeyError: MAX_FALSE_STARS = 2 #maximum number of objects that can be brighter than the two brightest stars
 try: DB_REDUNDANCY = int(environ['DB_REDUNDANCY'])
 except KeyError: DB_REDUNDANCY = 1 #of the brightest DB_REDUNDANCY+2 stars, we need at least 2
 try: REQUIRED_STARS = int(environ['REQUIRED_STARS'])
@@ -88,11 +88,11 @@ if __name__ == '__main__':
 	if system("diff -q "+sys.argv[1]+"/checksum.txt "+sys.argv[1]+"/calibration_data/checksum.txt")!=0:
 		print ("Clearing old calibration data:")
 		system("rm -rfv "+sys.argv[1]+"/calibration_data/* ")
-	
+
 	system("mv "+sys.argv[1]+"/checksum.txt "+sys.argv[1]+"/calibration_data/checksum.txt")
-		
+
 	stardb=getstardb()
-	
+
 	astrometry_results={}
 	#filter the background image for astrometry - more important for starfield generator
 	for n in range(0, num_images):
@@ -109,19 +109,19 @@ if __name__ == '__main__':
 			system('wcsinfo '+basename(image_name)+'.wcs  | tr [:lower:] [:upper:] | tr " " "=" | grep "=[0-9.-]*$" > '+basename(image_name)+'.solved')
 			hdulist=fits.open(basename(image_name)+".corr")
 			astrometry_results[image_names[n]]=np.array([[i['flux'],i['field_x'],i['field_y'],i['index_x'],i['index_y']]+angles2xyz(i['index_ra'],i['index_dec']) for i in hdulist[1].data])
-		
-	
+
+
 	#Use only values below the median for variance calculation.
 	#This is equivalent to calculating variance after having filtered out
 	#stars and background light
 	THRESH_FACTOR=5
 	IMAGE_VARIANCE=np.ma.average(images**2,weights=images<0)
-	
+
 	bestimage=""
 	maxstars=0
 	#for stars over 5*IMAGE_VARIANCE, find the corresponding star in the db
 	sd = np.array(list(stardb.values()), dtype = object)	#<SB> had to explicitly convert to list for python3
-	
+
 	star_kd = spatial.cKDTree(sd[:,4:7])
 	for i in astrometry_results:
 		astrometry_results[i]=astrometry_results[i][astrometry_results[i][:,0]>IMAGE_VARIANCE*THRESH_FACTOR]
@@ -132,23 +132,23 @@ if __name__ == '__main__':
 	astrometry_results_all=np.vstack(list(astrometry_results.values()))
 	# Expicitly convert to a float array to prevent numpy error
 	astrometry_results_all = astrometry_results_all.astype('float')
-	
+
 	#find the dimmest star
 	dimmest_match = astrometry_results_all[np.argmax(astrometry_results_all[:,1]),:]
 
 	BASE_FLUX=dimmest_match[8]/pow(10.0,-dimmest_match[1]/2.5)
-	print ("BASE_FLUX: ",BASE_FLUX) 
-	
+	print ("BASE_FLUX: ",BASE_FLUX)
+
 	db_img_dist=np.linalg.norm(astrometry_results_all[:,9:11]-astrometry_results_all[:,11:13],axis=1)
 	db_img_dist=db_img_dist-IMAGE_VARIANCE/(astrometry_results_all[:,8])
-	
+
 	POS_VARIANCE=np.mean(db_img_dist)
-	
+
 	#<SB> execfile went away in python3
 	#https://stackoverflow.com/questions/6357361/alternative-to-execfile-in-python-3
 	filename = sys.argv[1]+"/calibration_data/"+basename(bestimage)+".solved"
 	exec(compile(open(filename, "rb").read(), filename, 'exec'))
-	
+
 	f_calib=open(sys.argv[1]+"/calibration.txt", 'w')
 	f_calib.write("IMG_X="+str(IMAGEW)+"\n")
 	f_calib.write("IMG_Y="+str(IMAGEH)+"\n")
@@ -165,7 +165,7 @@ if __name__ == '__main__':
 	f_calib.write("APERTURE="+str(APERTURE)+"\n")
 	f_calib.write("EXPOSURE_TIME="+str(EXPOSURE_TIME)+"\n")
 	f_calib.close()
-	
+
 	print ("Calibration finished")
 	print ("calibration.txt and median_image.png are in "+sys.argv[1]+"\n")
 	system("cat "+sys.argv[1]+"/calibration.txt")

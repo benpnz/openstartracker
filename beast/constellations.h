@@ -84,7 +84,7 @@ public:
 
 			map_size=ns*(ns-1)/2;
 			map=(constellation*)malloc(map_size*sizeof(map[0]));
-			
+
 			int idx=0;
 			for (int j=1;j<ns;j++) for (int i=0;i<j;i++,idx++) {
 				map[idx].p=results->map[i].dist_arcsec(results->map[j]);
@@ -112,6 +112,7 @@ public:
 			results->reset_kdmask();
 			//preallocate map
 			map_size=c_set.size();
+			printf("map_size: %ld %ld %ld", map_size, sizeof(constellation), map_size*sizeof(map[0]));
 			map=(constellation*)malloc(map_size*sizeof(map[0]));
 			std::set<constellation>::iterator it = c_set.begin();
 			for (size_t idx=0; idx<map_size;idx++,it++) {

@@ -27,7 +27,7 @@ YEAR=float(sys.argv[2])
 #set up server before we do anything else
 server=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-try: 
+try:
 	server.bind(('127.0.0.1', 8010))
 except:
 	print("server socket already open: try terminal command: sudo kill $(sudo lsof -t -i:8010)")
@@ -41,7 +41,8 @@ print (CONFIGFILE)
 beast.load_config(CONFIGFILE)
 print ("Loading hip_main.dat" )
 S_DB=beast.star_db()
-S_DB.load_catalog("hip_main.dat",YEAR)
+#S_DB.load_catalog("hip_main.dat",YEAR)
+S_DB.load_catalog("OST_hip_man.dat",YEAR)
 print ("Filtering stars" )
 SQ_RESULTS=beast.star_query(S_DB)
 SQ_RESULTS.kdmask_filter_catalog()
@@ -52,11 +53,11 @@ C_DB=beast.constellation_db(S_FILTERED,2+beast.cvar.DB_REDUNDANCY,0)
 print ("Ready")
 def a2q(A):
 	q4=0.5*np.sqrt(1+np.trace(A));
-	
+
 	q1=1/(4*q4)*(A[1,2]-A[2,1]);
 	q2=1/(4*q4)*(A[2,0]-A[0,2]);
 	q3=1/(4*q4)*(A[0,1]-A[1,0]);
-	
+
 	return np.array([q1,q2,q3,q4])
 
 def q2a(q):
@@ -145,11 +146,11 @@ class star_image:
 		self.db_stars=None
 		self.match_from_lm=None
 		self.db_stars_from_lm=None
-		
+
 		#Placeholders so that these don't get garbage collected by SWIG
 		self.fov_db=None
 		self.const_from_lm=None
-		
+
 		#TODO: improve memory efficiency
 		if "://" in imagefile:
 			import urllib
@@ -159,10 +160,10 @@ class star_image:
 		if img is None:
 			print ("Invalid image, using blank dummy image", file=sys.stderr)
 			img=median_image
-			
+
 		img=np.clip(img.astype(np.int16)-median_image,a_min=0,a_max=255).astype(np.uint8)
 		img_grey = cv2.cvtColor(img,cv2.COLOR_RGB2GRAY)
-		
+
 		#removes areas of the image that don't meet our brightness threshold
 		ret,thresh = cv2.threshold(img_grey,beast.cvar.THRESH_FACTOR*beast.cvar.IMAGE_VARIANCE,255,cv2.THRESH_BINARY)
 		contours,heirachy = cv2.findContours(thresh,1,2);
@@ -179,10 +180,11 @@ class star_image:
 				u02 = M["m02"]/M["m00"] - cy**2
 				u11 = M["m11"]/M["m00"] - cx*cy
 				#the center pixel is used as the approximation of the brightest pixel
+				#print("image xy: {} {} {}".format(str(cx), str(cy), str(float(cv2.getRectSubPix(img_grey,(1,1),(cx,cy))[0,0]))))
 				self.img_stars+=beast.star(cx-beast.cvar.IMG_X/2.0,(cy-beast.cvar.IMG_Y/2.0),float(cv2.getRectSubPix(img_grey,(1,1),(cx,cy))[0,0]),-1)
 				self.img_data.append(b_conf+[cx,cy,u20,u02,u11]+cv2.getRectSubPix(img,(1,1),(cx,cy))[0,0].tolist())
-		
-	
+
+
 	def match_near(self,x,y,z,r):
 		SQ_RESULTS.kdsearch(x,y,z,r,beast.cvar.THRESH_FACTOR*beast.cvar.IMAGE_VARIANCE)
 		#estimate density for constellation generation
@@ -191,13 +193,13 @@ class star_image:
 		self.fov_db = beast.constellation_db(fov_stars,C_DB.results.r_size(),1)
 		C_DB.results.clear_kdresults()
 		SQ_RESULTS.clear_kdresults()
-		
+
 		img_const=beast.constellation_db(self.img_stars,beast.cvar.MAX_FALSE_STARS+2,1)
 		near = beast.db_match(self.fov_db,img_const)
 		if near.p_match>P_MATCH_THRESH:
 			self.match = near
 			self.db_stars = near.winner.from_match()
-		
+
 	def match_lis(self):
 		#for the first pass, we only want to use the brightest MAX_FALSE_STARS+REQUIRED_STARS
 		img_stars_n_brightest = self.img_stars.copy_n_brightest(beast.cvar.MAX_FALSE_STARS+beast.cvar.REQUIRED_STARS)
@@ -212,7 +214,7 @@ class star_image:
 			self.match_near(x,y,z,beast.cvar.MAXFOV/2)
 			#self.match = lis
 			#self.db_stars = lis.winner.from_match()
-			
+
 	def match_rel(self,last_match):
 		#make copy of stars from lastmatch
 		img_stars_from_lm=last_match.img_stars.copy()
@@ -234,7 +236,7 @@ class star_image:
 		if rel.p_match>P_MATCH_THRESH:
 			self.match_from_lm = rel
 			self.db_stars_from_lm = rel.winner.from_match()
-				
+
 	def print_match(self,bodyCorrection=None,angrate_string=""):
 		if bodyCorrection is None:
 			bodyCorrection=np.eye(3)
@@ -276,7 +278,7 @@ class nonstar:
 		NONSTAR_NEXT_ID+=1
 		self.data=[]
 		self.add_data(current_image,i,source)
-		
+
 	def add_data(self,current_image,i,source):
 		s_im=current_image.img_stars.get_star(i)
 		s_db_x=0.0
@@ -315,7 +317,7 @@ def flush_nonstars():
 	NONSTAR_DATAFILE.close()
 	NONSTAR_DATAFILENAME="data"+str(time())+".txt"
 	NONSTAR_DATAFILE=open(NONSTAR_DATAFILENAME,"w")
-	
+
 def update_nonstars(current_image,source):
 	global NONSTARS,NONSTAR_NEXT_ID
 	nonstars_next={}
@@ -344,7 +346,7 @@ def update_nonstars(current_image,source):
 			ns=nonstar(current_image,i,source)
 			nonstars_next[ns.id]=ns
 	NONSTARS=nonstars_next
-	
+
 	#wrap around to prevent integer overflow
 	if (NONSTAR_NEXT_ID>2**30):
 		flush_nonstars()
@@ -369,7 +371,7 @@ class star_camera:
 		self.current_image=None
 		self.last_match=None
 		self.median_image=cv2.imread(median_file)
-	
+
 	def solve_image(self,imagefile,lis=1,quiet=0):
 		starttime=time()
 		if (SIMULATE==1 and quiet==0):
@@ -383,15 +385,15 @@ class star_camera:
 		if (lis==1):
 			self.current_image.match_lis()
 		print("Time3: "+str(time() - starttime), file=sys.stderr)
-		if self.last_match is not None:
-			self.current_image.match_rel(self.last_match)
+		#if self.last_match is not None:
+		#	self.current_image.match_rel(self.last_match)
 		if (quiet==0):
-			if (SIMULATE==1): 
+			if (SIMULATE==1):
 				print (data.rstrip("\n").rstrip("\r"))
 			else:
 				self.current_image.print_match()
 			print("Time4: "+str(time() - starttime), file=sys.stderr)
-			
+
 		update_nonstars(self.current_image,self.source)
 		print("Time5: "+str(time() - starttime), file=sys.stderr)
 		if self.current_image.match is not None:
@@ -399,7 +401,7 @@ class star_camera:
 		else:
 			self.last_match=None
 		print("Time6: "+str(time() - starttime), file=sys.stderr)
-		
+
 	def extrapolate_image(self,imagefile1,imagefile2,time1,time2):
 		#self.solve_image(imagefile2,lis=1,quiet=0)
 		self.solve_image(imagefile1,lis=1,quiet=1)
@@ -419,9 +421,9 @@ class star_camera:
 		print(a1,a2,LA.svd(a1)[1],LA.svd(a1)[1], file=sys.stderr)
 		a,angrate=extrapolate_matrix(a1,a2,time1,time2,time()*1e6)
 		print(a,LA.svd(a)[1], file=sys.stderr)
-		
+
 		self.last_match.print_match(a,",".join([str(i) for i in angrate.tolist()]))
-		
+
 #dummy for now
 #TODO: add science data from IR cam
 class science_camera:

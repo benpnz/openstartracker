@@ -75,11 +75,12 @@ if [[ $ESA_TEST == 1 ]]; then
 	gprof test | gprof2dot -s | dot -Tpdf -o test.pdf &&
 	echo "camera coverage simulation percent:" &&
 	echo "100-`diff --suppress-common-lines --speed-large-files -y $TESTDIR/result.csv $TESTDIR/result_real.csv | wc -l`/1" | bc -l &&
-	$PYTHON score.py $TESTDIR/result.csv $TESTDIR/result_real.csv 
+	$PYTHON score.py $TESTDIR/result.csv $TESTDIR/result_real.csv
 fi
 
 if [[ $IMG_TEST == 1 ]]; then
-	$@ $PYTHON startracker.py $TESTDIR/calibration.txt 1991.25 $TESTDIR/median_image.png &
+	#$@ $PYTHON startracker.py $TESTDIR/calibration.txt 1991.25 $TESTDIR/median_image.png &
+	$@ $PYTHON startracker.py $TESTDIR/calibration.txt 2017 $TESTDIR/median_image.png &
 	KILLPID="$!"
 	sleep 10
 	#make sure we dont crash when given an image w/ no stars
@@ -96,7 +97,7 @@ if [[ $IMG_TEST == 1 ]]; then
   sleep 0.5
 	echo 'quit()' | nc -w1 127.0.0.1 8010
 fi
-if [ "$KILLPID" != "" ] ; then 
+if [ "$KILLPID" != "" ] ; then
 	kill $KILLPID
 fi
 popd>/dev/null
