@@ -33,8 +33,10 @@ for line in fp_input:
     j = 0
     while i < len(split_line):
         # Read three items from the input and one from the output
+        # print("{} {} {} {}".format(str(i), str(j), str(len(split_line)), str(len(split_output))))
         new_item = TestCaseItem(split_output[j], split_line[i+0],\
-            split_line[i+1], split_line[i+2])
+           split_line[i+1], split_line[i+2])
+        # new_item = TestCaseItem(split_output[j], 0, 0, 0)
         items.append(new_item)
         #print("{} {} {}".format(str(split_line[i+0]), str(split_line[i+1]), str(split_line[i+2])))
         i = i + 3
@@ -43,9 +45,14 @@ for line in fp_input:
     # sort by star brightness
     items.sort(key=get_sort_key)
 
+    i = 0
     # output the result
     for sorted_item in items:
         print("{} {} {} {}".format(str(sorted_item.id), str(sorted_item.img_x), \
             str(sorted_item.img_y), str(sorted_item.mag)))
+        i = i + 1
+
+        if i == 15:
+            break
 
     count = count + 1
