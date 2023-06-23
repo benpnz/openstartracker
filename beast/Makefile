@@ -4,7 +4,7 @@ PYTHONHEADERS=/usr/include/python3.8
 
 all: $(OBJ)
 	swig -python -c++ beast.i
-	$(CC) -g -std=c++11 -Ofast -fPIC -c beast_wrap.cxx -o beast_wrap.o -lstdc++ -I$(PYTHONHEADERS)
+	$(CC) -g -std=c++11 -O0 -fPIC -c beast_wrap.cxx -o beast_wrap.o -lstdc++ -I$(PYTHONHEADERS)
 	$(CC) -g -shared -fPIC beast_wrap.o -o _beast.so
 	
 clean:
