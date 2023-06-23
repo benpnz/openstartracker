@@ -7,7 +7,7 @@
 struct  match_result {
 //TODO: private:
 	constellation_pair match;
-	
+
 	//eci to body (body=R*eci)
 	float R11,R12,R13;
 	float R21,R22,R23;
@@ -19,7 +19,7 @@ private:
 	constellation* db_const;
 	constellation_db *db,*img;
 public:
-	
+
 	/**
 	* @brief TODO
 	* @param db_
@@ -35,7 +35,7 @@ public:
 		map_size=img->stars->size();
 		map=(int *)malloc(sizeof(map[0])*map_size);
 		match.totalscore=-FLT_MAX;
-		
+
 	}
 	~match_result() {
 		DBG_MATCH_RESULT_COUNT--;
@@ -50,13 +50,13 @@ public:
 	*/
 	void init(constellation &db_const_, constellation &img_const_) {
 		db_const=&db_const_;
-		
+
 		match.img_s1=img_const_.s1;
 		match.img_s2=img_const_.s2;
 		match.db_s1=db_const_.s1;
 		match.db_s2=db_const_.s2;
 	}
-	
+
 	/**
 	* @brief TODO
 	* @param c
@@ -65,23 +65,23 @@ public:
 		assert(c->db==db);
 		assert(c->img==img);
 		assert(c->img_mask==img_mask);
-		
+
 		c->match=match;
 		c->db_const=db_const;
-		
+
 		c->R11=R11,c->R12=R12,c->R13=R13;
 		c->R21=R21,c->R22=R22,c->R23=R23;
 		c->R31=R31,c->R32=R32,c->R33=R33;
-		
+
 		memcpy(c->map, map, sizeof(map[0])*map_size);
 	}
 	/**
 	* @brief TODO
 	* @param m
-	* @return 
+	* @return
 	*/
 	int related(constellation_pair &m) {
-		
+
 		if (match.totalscore==-FLT_MAX || m.totalscore==-FLT_MAX) return 0;
 		return (map[m.img_s1]==m.db_s1 && map[m.img_s2]==m.db_s2)?1:0;
 	}
@@ -112,7 +112,7 @@ public:
 			float z=s->x*R13+s->y*R23+s->z*R33;
 			float px=y/(x*PIXX_TANGENT);
 			float py=z/(x*PIXY_TANGENT);
-			
+
 			int n=img_mask->get_id(px,py);
 			if (n>=0) {
 				float score = img_mask->get_score(n,px,py);
@@ -121,7 +121,7 @@ public:
 					scores[n]=score;
 				}
 			}
-		}		
+		}
 		for(size_t n=0;n<map_size;n++) {
 			match.totalscore+=scores[n];
 		}
@@ -132,7 +132,7 @@ public:
 	*/
 	star_db* from_match() {
 		if (match.totalscore==-FLT_MAX) return NULL;
-		
+
 		star_db* s = img->stars->copy();
 		s->max_variance=db->stars->max_variance;
 		for(size_t n=0;n<map_size;n++) {
@@ -148,9 +148,9 @@ public:
 
 	/**
 	* @brief weighted_triad results
-	* see https://en.wikipedia.org/wiki/Triad_method 
+	* see https://en.wikipedia.org/wiki/Triad_method
 	* and http://nghiaho.com/?page_id=846
-	* 
+	*
 	* when compiled, this section contains roughly 430 floating point operations
 	* according to https://www.karlrupp.net/2016/02/gemm-and-stream-results-on-intel-edison
 	* we can perform >250 MFLOPS with doubles, and >500 MFLOPS with floats
@@ -160,7 +160,7 @@ public:
 		star *db_s2=db->stars->get_star(match.db_s2);
 		star *img_s1=img->stars->get_star(match.img_s1);
 		star *img_s2=img->stars->get_star(match.img_s2);
-		
+
 		/* v=A*w */
 		float wa1=db_s1->x,wa2=db_s1->y,wa3=db_s1->z;
 		float wb1=db_s2->x,wb2=db_s2->y,wb3=db_s2->z;
@@ -181,7 +181,7 @@ public:
 		vc1/=vcnorm;
 		vc2/=vcnorm;
 		vc3/=vcnorm;
-		
+
 		float vaXvc1=va2*vc3 - va3*vc2;
 		float vaXvc2=va3*vc1 - va1*vc3;
 		float vaXvc3=va1*vc2 - va2*vc1;
@@ -189,9 +189,9 @@ public:
 		float waXwc1=wa2*wc3 - wa3*wc2;
 		float waXwc2=wa3*wc1 - wa1*wc3;
 		float waXwc3=wa1*wc2 - wa2*wc1;
-		
+
 		/* some of these are unused */
-		
+
 		float A11=va1*wa1 + vaXvc1*waXwc1 + vc1*wc1;
 		/* float A12=va1*wa2 + vaXvc1*waXwc2 + vc1*wc2; */
 		/* float A13=va1*wa3 + vaXvc1*waXwc3 + vc1*wc3; */
@@ -201,22 +201,22 @@ public:
 		float A31=va3*wa1 + vaXvc3*waXwc1 + vc3*wc1;
 		float A32=va3*wa2 + vaXvc3*waXwc2 + vc3*wc2;
 		float A33=va3*wa3 + vaXvc3*waXwc3 + vc3*wc3;
-		
+
 		wc1=-wc1;
 		wc2=-wc2;
 		wc3=-wc3;
-		
+
 		vc1=-vc1;
 		vc2=-vc2;
 		vc3=-vc3;
 		float vbXvc1=vb2*vc3 - vb3*vc2;
 		float vbXvc2=vb3*vc1 - vb1*vc3;
 		float vbXvc3=vb1*vc2 - vb2*vc1;
-		
+
 		float wbXwc1=wb2*wc3 - wb3*wc2;
 		float wbXwc2=wb3*wc1 - wb1*wc3;
 		float wbXwc3=wb1*wc2 - wb2*wc1;
-		
+
 		/* some of these are unused */
 		float B11=vb1*wb1 + vbXvc1*wbXwc1 + vc1*wc1;
 		/* float B12=vb1*wb2 + vbXvc1*wbXwc2 + vc1*wc2; */
@@ -227,46 +227,46 @@ public:
 		float B31=vb3*wb1 + vbXvc3*wbXwc1 + vc3*wc1;
 		float B32=vb3*wb2 + vbXvc3*wbXwc2 + vc3*wc2;
 		float B33=vb3*wb3 + vbXvc3*wbXwc3 + vc3*wc3;
-		
+
 		/* use weights based on magnitude */
 		/* weighted triad */
 		float weightA=1.0/(db_s1->sigma_sq+img_s1->sigma_sq);
 		float weightB=1.0/(db_s2->sigma_sq+img_s2->sigma_sq);
-		
+
 		float sumAB=weightA+weightB;
 		weightA/=sumAB;
 		weightB/=sumAB;
-		
+
 		float cz,sz,mz;
 		float cy,sy,my;
 		float cx,sx,mx;
-		
+
 		cz=weightA*A11+weightB*B11;
 		sz=weightA*A21+weightB*B21;
 		mz=sqrt(cz*cz+sz*sz);
 		cz=cz/mz;
 		sz=sz/mz;
-		
+
 		cy=weightA*sqrt(A32*A32+A33*A33)+weightB*sqrt(B32*B32+B33*B33);
 		sy=-weightA*A31-weightB*B31;
 		my=sqrt(cy*cy+sy*sy);
 		cy=cy/my;
 		sy=sy/my;
-		
+
 		cx=weightA*A33+weightB*B33;
 		sx=weightA*A32+weightB*B32;
 		mx=sqrt(cx*cx+sx*sx);
 		cx=cx/mx;
 		sx=sx/mx;
-		
+
 		R11=cy*cz;
 		R21=cz*sx*sy - cx*sz;
 		R31=sx*sz + cx*cz*sy;
-		
+
 		R12=cy*sz;
 		R22=cx*cz + sx*sy*sz;
 		R32=cx*sy*sz - cz*sx;
-		
+
 		R13=-sy;
 		R23=cy*sx;
 		R33=cx*cy;
@@ -276,7 +276,7 @@ public:
 		DBG_PRINT("%f\t%f\t%f\n", R11,R12,R13);
 		DBG_PRINT("%f\t%f\t%f\n", R21,R22,R23);
 		DBG_PRINT("%f\t%f\t%f\n", R31,R32,R33);
-		
+
 		db->DBG_("DB");
 		img->DBG_("IMG");
 		DBG_PRINT("map_size=%lu\n", map_size);
@@ -302,8 +302,8 @@ private:
 public:
 	float p_match;
 	match_result *winner;
-	
-		
+
+
 	/**
 	* @brief TODO
 	* @param db
@@ -317,9 +317,11 @@ public:
 		c_pairs=NULL;
 		c_pairs_size=0;
 		p_match=0.0;
+		char tmp[64];
+		sprintf(tmp, "%ld %ld", db->stars->size(), img->stars->size());
 		if (db->stars->size()<3||img->stars->size()<3) return;
 		img_mask = new star_fov(img->stars,db->stars->max_variance);
-		
+
 		//find stars
 		match_result *m=new match_result(db, img, img_mask);
 		winner=new match_result(db, img, img_mask);
@@ -328,8 +330,12 @@ public:
 			constellation ub=img->map[n];
 			lb.p-=POS_ERR_SIGMA*PIXSCALE*sqrt(img->stars->get_star(lb.s1)->sigma_sq+img->stars->get_star(lb.s2)->sigma_sq+2*db->stars->max_variance);
 			ub.p+=POS_ERR_SIGMA*PIXSCALE*sqrt(img->stars->get_star(ub.s1)->sigma_sq+img->stars->get_star(ub.s2)->sigma_sq+2*db->stars->max_variance);
-			constellation *lower=std::lower_bound (db->map, db->map+db->map_size, lb,constellation_lt_p);	
+			constellation *lower=std::lower_bound (db->map, db->map+db->map_size, lb,constellation_lt_p);
 			constellation *upper=std::upper_bound (db->map, db->map+db->map_size, ub,constellation_lt_p);
+			star *s1 = db->stars->get_star(winner->match.db_s1);
+			star *s2 = db->stars->get_star(winner->match.db_s2);
+			sprintf(tmp, "%ld %f %f", s1->id, s1->px, s1->py);
+			sprintf(tmp, "%ld %f %f", s2->id, s2->px, s2->py);
 			//rewind upper & do sanity checks
 			if (db->map>=upper--) continue;
 			if (db->map+db->map_size<=lower) continue;
@@ -357,7 +363,7 @@ public:
 			}
 		}
 		delete m;
-		
+
 		//calculate map
 		if (winner->match.totalscore!=-FLT_MAX) { //Did we even match?
 			/**
@@ -377,7 +383,7 @@ public:
 			p_match=1.0/p_match;
 		}
 	}
-	
+
 	~db_match() {
 		DBG_DB_MATCH_COUNT--;
 		DBG_PRINT("DBG_DB_MATCH_COUNT-- %d\n",DBG_DB_MATCH_COUNT);

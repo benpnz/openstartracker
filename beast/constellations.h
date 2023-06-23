@@ -74,6 +74,8 @@ public:
 		DBG_CONSTELLATION_DB_COUNT++;
 		DBG_PRINT("DBG_CONSTELLATION_DB_COUNT++ %d\n",DBG_CONSTELLATION_DB_COUNT);
 
+		char tmp[64];
+
 		if (from_image) {
 			stars=s->copy();
 			results=new star_query(stars);
@@ -92,7 +94,8 @@ public:
 				map[idx].s2=results->map[j].star_idx;
 			}
 			std::sort(map, map+map_size,constellation_lt_p);
-			while (--idx>=0) map[idx].idx=idx;
+			while (--idx>=0)
+				map[idx].idx=idx;
 		} else {
 			stars=s->copy();
 			results=new star_query(stars);
@@ -105,6 +108,11 @@ public:
 					c.p=results->map[i].dist_arcsec(results->map[results->kdresults[j]]);
 					c.s1=results->map[i].star_idx;
 					c.s2=results->map[results->kdresults[j]].star_idx;
+					if ((results->map[i].id == 23693 && results->map[results->kdresults[j]].id == 23595) ||
+						(results->map[i].id == 23595 && results->map[results->kdresults[j]].id == 23693)) {
+							char tmp[25];
+							sprintf(tmp, "%f", c.p);
+						}
 					c_set.insert(c);
 				}
 				results->clear_kdresults();
@@ -112,7 +120,7 @@ public:
 			results->reset_kdmask();
 			//preallocate map
 			map_size=c_set.size();
-			printf("map_size: %ld %ld %ld", map_size, sizeof(constellation), map_size*sizeof(map[0]));
+			printf("map_size: %ld %ld %ld %ld\n", map_size, sizeof(constellation), map_size*sizeof(map[0]), stars->size());
 			map=(constellation*)malloc(map_size*sizeof(map[0]));
 			std::set<constellation>::iterator it = c_set.begin();
 			for (size_t idx=0; idx<map_size;idx++,it++) {

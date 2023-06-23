@@ -212,6 +212,9 @@ class star_image:
 			y=lis.winner.R21
 			z=lis.winner.R31
 			self.match_near(x,y,z,beast.cvar.MAXFOV/2)
+			tmp_star = S_DB.get_star(lis.winner.match.db_s1)
+			tmp_star = S_DB.get_star(lis.winner.match.db_s2)
+			print("{}".format(str(tmp_star)))
 			#self.match = lis
 			#self.db_stars = lis.winner.from_match()
 
@@ -260,6 +263,7 @@ class star_image:
 				weight=1.0/(s_db.sigma_sq+s_im.sigma_sq)
 				temp=np.dot(bodyCorrection, np.array([[s_im.x],[s_im.y],[s_im.z]]))
 				star_out.append(str(temp[0,0])+','+str(temp[1,0])+','+str(temp[2,0])+','+str(s_db.x)+','+str(s_db.y)+','+str(s_db.z)+','+str(weight))
+				print(str(s_db.id))
 		print ("stars",len(star_out), file=sys.stderr)
 		print ("ang_rate: "+angrate_string, file=sys.stderr)
 		print (" ".join(star_out)+" "+angrate_string)
@@ -379,8 +383,10 @@ class star_camera:
 			s.connect(("jeb",7011))
 			data = s.recv(2048)
 			s.close()
+
 		print("Time1: "+str(time() - starttime), file=sys.stderr)
-		self.current_image=star_image(imagefile,self.median_image)
+		# TODO Added "tests/" for running in the debugger
+		self.current_image=star_image("tests/"+imagefile,self.median_image)
 		print("Time2: "+str(time() - starttime), file=sys.stderr)
 		if (lis==1):
 			self.current_image.match_lis()

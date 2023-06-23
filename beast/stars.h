@@ -170,6 +170,8 @@ public:
 			hash_set.insert(temp.hash_val);
 			flux_map.emplace(temp.flux,temp.hash_val);
 			star_idx_vector.push_back(temp.hash_val);
+			char tmp_buf[32];
+			sprintf(tmp_buf, "%f %f", temp.px, temp.py);
 			sz++;
 		}
 		return this;
@@ -222,7 +224,10 @@ public:
 		star_db* s = new star_db;
 		auto first=flux_map.crbegin();
 		auto last=std::next(flux_map.crbegin(),std::min(n,size()));
-		for (;first!=last;first++) (*s)+=get_star_by_hash(first->second);
+		for (;first!=last;first++) {
+			star *to_add = get_star_by_hash(first->second);
+			(*s)+=to_add;
+		}
 		return s;
 	}
 	//std::array* n_brightest(T &hs,n) {
@@ -270,6 +275,7 @@ public:
 		ssize_t read;
 		char *line = NULL;
 		size_t len = 0;
+		char tmp[128];
 
 		char* hip_record[5];
 		while ((read = getline(&line, &len, stream)) != -1){
@@ -278,14 +284,19 @@ public:
 					hip_record[j] = strtok(NULL,"|");
 				}
 
+				int star_id = atoi(hip_record[0]);
 				float MAG=atof(hip_record[4]);
 				float DEC=atof(hip_record[3]);
 				float cosdec=cos(PI*DEC/180.0);
 				float RA=atof(hip_record[2]);
 
-				star s = star(cos(PI*RA/180.0)*cosdec,sin(PI*RA/180.0)*cosdec,sin(PI*DEC/180.0),BASE_FLUX*powf(10.0,-MAG/2.5),atoi(hip_record[0]));
+				star s = star(cos(PI*RA/180.0)*cosdec,sin(PI*RA/180.0)*cosdec,sin(PI*DEC/180.0),BASE_FLUX*powf(10.0,-MAG/2.5),star_id);
 				s.unreliable=0; //((atoi(hip_record[29])==0||atoi(hip_record[29])==1)&&atoi(hip_record[6])!=3)?0:1;
 				(*this)+=s;
+
+				if (star_id == 23595 || star_id == 23693) {
+					sprintf(tmp, "%d %f %f %f", star_id, s.x, s.y, s.z);
+				}
 		}
 
 		/*char* hip_record[78];
@@ -303,6 +314,7 @@ public:
 				s.unreliable=((atoi(hip_record[29])==0||atoi(hip_record[29])==1)&&atoi(hip_record[6])!=3)?0:1;
 				(*this)+=s;
 		}*/
+		printf("lib_size: %ld\n", size());
 		free(line);
 		fclose(stream);
 
@@ -533,6 +545,7 @@ public:
 		kdmask=(int8_t*)malloc((map_size+1)*sizeof(kdmask[0]));
 		kdresults=(size_t*)malloc((map_size+1)*sizeof(kdresults[0]));
 		map=(star*)malloc(map_size*sizeof(map[0]));
+		printf("star_query: %ld\n", map_size);
 		for (size_t i=0;i<map_size;i++){
 			map[i]=stars->get_star(i)[0];
 			kdresults[i]=i;
@@ -695,6 +708,9 @@ public:
 		std::unordered_set<int>::iterator it = uniform_set.begin();
 		for (size_t i=0; i<uniform_set.size();i++,it++) kdmask[*it]=0;
 		kdresults_maxsize=kdresults_maxsize_old;
+
+		printf("kdmask_uniform_density: %ld %ld %ld %ld\n", kdresults_maxsize_old, min_stars_per_fov,
+			stars->size(), uniform_set.size());
 	}
 	/**
 	* @brief Filter stardb based on mask
